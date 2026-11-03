@@ -205,3 +205,83 @@ def extrapolar_Tc(L_eff, T_cruce, s_cruce, exponente=1.0):
     c, cov, chi2r = ajuste_lineal_ponderado(x, T_cruce, s_cruce)
     return dict(Tc=float(c[0]), sTc=float(np.sqrt(cov[0, 0])), a=float(c[1]),
                 chi2_red=chi2r, exponente=exponente, n=len(x))
+
+
+# ============================ REPONDERACIÓN (Ferrenberg–Swendsen) ===========
+# Con las series E(t), M(t) medidas a beta0 se puede estimar cualquier
+# promedio a un beta cercano:
+#     <O>_beta = sum_t O_t exp(-(beta-beta0) E_t) / sum_t exp(-(beta-beta0) E_t)
+# Así U_L(T) se vuelve una curva CONTINUA y el cruce se ubica con una
+# precisión mucho mayor que la separación de la grilla de temperaturas.
+# Es fiable mientras |beta - beta0| * sigma_E <~ 1; por eso se mezclan las dos
+# temperaturas simuladas que encierran a T.
+
+def _U_rw_una(E, M, beta0, beta):
+    x = -(beta - beta0) * E
+    w = np.exp(x - x.max())
+    w /= w.sum()
+    m2 = w @ (M * M)
+    m4 = w @ (M ** 4)
+    return 1.0 - m4 / (3.0 * m2 * m2)
+
+
+def U_reponderado(T_sim, E, M, k_B, T, sel=None):
+    """U_L(T) por reponderación desde las dos temperaturas simuladas vecinas."""
+    o = np.argsort(T_sim)
+    T_sim = np.asarray(T_sim)[o]
+    E, M = E[o], M[o]
+    if sel is not None:
+        E, M = E[:, sel], M[:, sel]
+    beta = 1.0 / (k_B * T)
+    b_sim = 1.0 / (k_B * T_sim)
+    i = np.searchsorted(T_sim, T)
+    if i <= 0:
+        return _U_rw_una(E[0], M[0], b_sim[0], beta)
+    if i >= len(T_sim):
+        return _U_rw_una(E[-1], M[-1], b_sim[-1], beta)
+    lam = (b_sim[i - 1] - beta) / (b_sim[i - 1] - b_sim[i])
+    return ((1 - lam) * _U_rw_una(E[i - 1], M[i - 1], b_sim[i - 1], beta)
+            + lam * _U_rw_una(E[i], M[i], b_sim[i], beta))
+
+
+def _raiz_rw(d1, d2, k_B, a, b, sel=None, n_scan=60):
+    from scipy.optimize import brentq
+    f = lambda T: (U_reponderado(d2["T"], d2["E"], d2["M"], k_B, T, sel)
+                   - U_reponderado(d1["T"], d1["E"], d1["M"], k_B, T, sel))
+    Ts = np.linspace(a, b, n_scan)
+    fs = np.array([f(t) for t in Ts])
+    idx = np.where((fs[:-1] > 0) & (fs[1:] <= 0))[0]
+    if len(idx) == 0:
+        return np.nan
+    j = idx[np.argmin(np.abs(Ts[idx] - 0.5 * (a + b)))]
+    return brentq(f, Ts[j], Ts[j + 1], xtol=1e-6 * (b - a))
+
+
+def refinar_cruce(d1, d2, k_B, a, b, n_bloques=20):
+    """
+    Cruce U_L1 = U_L2 por reponderación en [a, b], con error jackknife
+    (se deja fuera el mismo bloque de medidas en todas las temperaturas).
+    d1, d2: diccionarios con T, E[nT, n], M[nT, n].
+    Devuelve (T_x, sigma_T, U*, sigma_U) o None si no hay cruce.
+    """
+    Tx = _raiz_rw(d1, d2, k_B, a, b)
+    if not np.isfinite(Tx):
+        return None
+    Ux = U_reponderado(d1["T"], d1["E"], d1["M"], k_B, Tx)
+    n = min(d1["E"].shape[1], d2["E"].shape[1])
+    K = int(n_bloques)
+    bl = n // K
+    rT, rU = [], []
+    for k in range(K):
+        sel = np.r_[0:k * bl, (k + 1) * bl:K * bl]
+        r = _raiz_rw(d1, d2, k_B, a, b, sel)
+        if np.isfinite(r):
+            rT.append(r)
+            rU.append(U_reponderado(d1["T"], d1["E"][:, :n], d1["M"][:, :n], k_B, r, sel))
+    if len(rT) < K // 2:
+        return None
+    rT, rU = np.array(rT), np.array(rU)
+    m = len(rT)
+    sT = np.sqrt((m - 1) / m * np.sum((rT - rT.mean()) ** 2))
+    sU = np.sqrt((m - 1) / m * np.sum((rU - rU.mean()) ** 2))
+    return float(Tx), float(sT), float(Ux), float(sU)

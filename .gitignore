@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+# Jupyter
+.ipynb_checkpoints/
+# Resultados generados por las simulaciones (se regeneran con run.py)
+Proyecto_MXenes/resultados/*.npz
+Proyecto_MXenes/resultados/*.json
+Proyecto_MXenes/resultados_*/
+# macOS
+.DS_Store

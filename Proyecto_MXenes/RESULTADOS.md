@@ -10,6 +10,10 @@
 Criterio (< 0.5 %): aprobado en los dos. La forma x = 3 (1/ν + ω) queda más
 cerca del exacto en ambos casos (0.13 % y 0.04 %).
 
+Repetición tras cambiar la calibración de Wolff (commit "Wolff: calibración..."):
+FM 26.337 ± 0.084 K (0.02 %), AFM 26.235 ± 0.090 K (0.37 %); con x = 3,
+26.312 ± 0.037 y 26.284 ± 0.037 K. Aprobado.
+
 ## MXene Nb–Ti 30 % desnuda — modelo de Ising con J reconstruidos (2 nov 2026)
 
 - J: `modelo_desnuda.py`, reconstruidos del informe TB2J de Luis (13 oct 2026);

@@ -12,6 +12,10 @@ red + J  →  estado fundamental  →  Monte Carlo (varios L)  →  cruce de Bin
 **Validado** contra la solución exacta de Onsager (red cuadrada FM y AFM):
 error de 0.02–0.37 %, U* = 0.612–0.615. Ver [docs/resultados.md](docs/resultados.md).
 
+**Documentos en PDF:**
+[Guía del código](docs/Guia_del_codigo.pdf) (qué hace, cómo funciona y cómo correrlo paso a paso) ·
+[Informe de correcciones](docs/Informe_de_correcciones.pdf) (qué estaba mal en el código original y qué se corrigió).
+
 ---
 
 ## Instalación
@@ -77,6 +81,8 @@ Para J de TB2J use `factor_J = 2`.
 ├── notebooks/               cuaderno de trabajo y rendimiento
 ├── tests/                   pruebas unitarias (pytest)
 ├── docs/
+│   ├── Guia_del_codigo.pdf    guía en lenguaje llano: qué hace y cómo correrlo
+│   ├── Informe_de_correcciones.pdf  qué estaba mal y qué se corrigió
 │   ├── metodo.md              método, convenciones y verificaciones
 │   ├── resultados.md          validación y resultados del material
 │   └── figuras/

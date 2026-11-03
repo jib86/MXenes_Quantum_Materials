@@ -52,8 +52,10 @@ def main():
             continue
         err = abs(r["Tc_K"] - Tc_exacto) / Tc_exacto
         ok = err < TOL_REL
-        informe[nombre] = dict(Tc_K=r["Tc_K"], sTc_K=r["sTc_K"], Tc_alt_K=r["Tc_alt_K"],
-                               U_estrella=r["U_estrella"], error_rel=err, aprobado=ok)
+        informe[nombre] = dict(Tc_K=float(r["Tc_K"]), sTc_K=float(r["sTc_K"]),
+                               Tc_alt_K=float(r["Tc_alt_K"]), sTc_alt_K=float(r["sTc_alt_K"]),
+                               Tc_exacto_K=float(Tc_exacto), U_estrella=float(r["U_estrella"]),
+                               error_rel=float(err), aprobado=bool(ok))
         print(f"\n{nombre}: T_c = {r['Tc_K']:.3f} ± {r['sTc_K']:.3f} K   exacto = "
               f"{Tc_exacto:.3f} K   error = {100*err:.2f} %  ->  "
               + ("APROBADO" if ok else "NO APROBADO"))

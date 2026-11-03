@@ -51,12 +51,29 @@ RESULTADO: temperatura de Curie = 591.72 ± 3.95 (estad.) ± 0.77 (sist.) K
   AVISO: MAE / (k_B T_c) = 0.0196: MENOR que 10: Ising sobreestima T_c; use Heisenberg con anisotropía.
 ```
 
-## Cómo cargar un material
+## Dónde se ponen los J (valores de DFT)
 
-Los acoplamientos se dan como enlaces de la celda unidad
-**(k, k′, n1, n2, J)**: el átomo k de la celda (0, 0) con el átomo k′ de la
-celda (n1, n2), que es el formato de TB2J. También se pueden dar por anillos de
-distancia. Ver el ejemplo en [`materiales/nbti30_desnuda.py`](materiales/nbti30_desnuda.py).
+En [`parametros.py`](parametros.py), en la sección marcada
+**«ACOPLAMIENTOS DE CANJE J (meV) — AQUÍ SE ESCRIBEN LOS J DEL DFT»**. Cada línea
+de la lista `enlaces` es un par de átomos y su J, con un comentario que dice qué
+par es:
+
+```python
+enlaces = [
+    # --- Capa inferior, primeros vecinos (3.13 Å) ---
+    (2, 5,  0,  0,   16.60),   #  Ti3 – Ti6  misma celda
+    (2, 4,  0,  1,   16.60),   #  Ti3 – Ti5  celda vecina (+0, +1)
+    ...
+]
+```
+
+- **k, k′**: los dos átomos, por su lugar en la lista `posiciones` (desde 0).
+- **n1, n2**: celda del segundo átomo respecto del primero (columna `R` de TB2J).
+- **J**: en meV, tal como lo da la fuente; `factor_J` hace la conversión (2 para TB2J).
+
+Cada par se escribe una vez; un enlace que no aparece vale 0. Hoy la lista tiene
+los 64 enlaces de la MXene desnuda, reconstruidos del informe TB2J
+(ver [`materiales/nbti30_desnuda.py`](materiales/nbti30_desnuda.py)).
 
 **Convención:** H = −Σ<sub>⟨ij⟩</sub> J<sub>ij</sub> S<sub>i</sub> S<sub>j</sub>,
 S = ±1, cada par contado una vez, J > 0 ferromagnético, J en meV.

@@ -308,7 +308,7 @@ def ejecutar(cfg, verbose=True):
 
     if cfg["MAE_meV"] is not None:
         r = cfg["MAE_meV"] / (cfg["k_B"] * ext["Tc"])
-        txt = (f"MAE / (k_B T_c) = {r:.1f}: "
+        txt = (f"MAE / (k_B T_c) = {r:.3g}: "
                + ("Ising es razonable (>= 10)." if r >= 10 else
                   "MENOR que 10: Ising sobreestima T_c; use Heisenberg con anisotropía."))
         if r < 10:

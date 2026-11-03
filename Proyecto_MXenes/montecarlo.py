@@ -136,19 +136,22 @@ def simular_temperatura(spins, vec, Jv, nvec, eps, beta, n_term, n_skip, n_meas,
     pila = np.empty(N, dtype=np.int64)
     en_cluster = np.zeros(N, dtype=np.bool_)
     # Termalización. Con Wolff, el número de clusters por paso se ajusta para
-    # voltear ~N espines por paso (tamaño medio de cluster medido en la
-    # segunda mitad de la termalización) y luego queda FIJO para medir.
+    # voltear ~N espines por paso usando el tamaño MEDIO ACUMULADO de los
+    # clusters (se reinicia a mitad de la termalización para olvidar el
+    # arranque). No usar solo el último paso: en la fase ordenada los tamaños
+    # son bimodales (gotas pequeñas o casi todo el sistema) y un paso con una
+    # gota diminuta dispararía miles de clusters gigantes en el siguiente.
+    # Durante la medición n_cl queda FIJO.
     n_cl = 1
     suma, cuenta = 0.0, 0
     for t in range(n_term):
+        if t == n_term // 2:
+            suma, cuenta = 0.0, 0
         v = paso_mc(spins, vec, Jv, nvec, beta, alg, pila, en_cluster, n_cl)
         if alg != 0:
-            if t >= n_term // 2:
-                suma += v
-                cuenta += n_cl
-                n_cl = max(1, int(round(N / (suma / cuenta))))
-            else:
-                n_cl = max(1, int(round(N / max(1.0, v / n_cl))))
+            suma += v
+            cuenta += n_cl
+            n_cl = min(N, max(1, int(round(N / (suma / cuenta)))))
     E = np.empty(n_meas)
     M = np.empty(n_meas)
     for t in range(n_meas):

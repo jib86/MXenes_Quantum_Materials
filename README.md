@@ -103,3 +103,7 @@ Para J de TB2J use `factor_J = 2`.
   geometría de celda U* cambia y sirve solo como guía.
 
 Detalles del método y referencias en [docs/metodo.md](docs/metodo.md).
+
+## Licencia
+
+Distribuido bajo la licencia MIT. Ver [LICENSE](LICENSE).

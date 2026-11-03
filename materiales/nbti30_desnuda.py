@@ -1,6 +1,6 @@
 """
 ================================================================
- modelo_desnuda.py — MXene Nb–Ti 30 % DESNUDA: modelo RECONSTRUIDO
+ nbti30_desnuda.py — MXene Nb–Ti 30 % DESNUDA: modelo RECONSTRUIDO
 ================================================================
 
 Fuente: informe "MXene Nb–Ti 30 %: magnetismo de la monocapa mixta y la

@@ -19,8 +19,8 @@ import json
 import os
 import numpy as np
 
-from run import ejecutar
-import parametros
+from isingmc import K_B
+from isingmc.flujo import ejecutar
 
 TC_EXACTO_ADIM = 2.0 / np.log(1.0 + np.sqrt(2.0))
 TOL_REL = 0.005
@@ -28,7 +28,7 @@ TOL_REL = 0.005
 
 def config_cuadrada(J, salida):
     return dict(
-        k_B=parametros.k_B,
+        k_B=K_B,
         cell=np.diag([1.0, 1.0, 20.0]), posiciones=np.array([[0.0, 0.0, 0.0]]),
         modo_J="anillos", anillos=[{"d": 1.0, "J": J}], tol=0.05, enlaces=[],
         factor_J=1.0, epsilon_base=None, periodo_epsilon=None, MAE_meV=None,
@@ -41,11 +41,11 @@ def config_cuadrada(J, salida):
 
 
 def main():
-    Tc_exacto = TC_EXACTO_ADIM * 1.0 / parametros.k_B
+    Tc_exacto = TC_EXACTO_ADIM * 1.0 / K_B
     informe = {}
     for J, nombre in ((+1.0, "FM"), (-1.0, "AFM")):
         print(f"\n######## Validación Onsager {nombre} (J = {J:+.0f} meV) ########")
-        r = ejecutar(config_cuadrada(J, f"./resultados_onsager_{nombre}"))
+        r = ejecutar(config_cuadrada(J, os.path.join("resultados", f"onsager_{nombre}")))
         if not r.get("exito"):
             informe[nombre] = dict(aprobado=False, mensaje=r.get("mensaje"))
             print(f"\n{nombre}: NO APROBADO ({r.get('mensaje')})")
@@ -60,7 +60,8 @@ def main():
               f"{Tc_exacto:.3f} K   error = {100*err:.2f} %  ->  "
               + ("APROBADO" if ok else "NO APROBADO"))
         print(f"{nombre}: U* = {r['U_estrella']:.4f}  (esperado ~ 0.6107)")
-    with open("resultados_onsager.json", "w") as f:
+    os.makedirs("resultados", exist_ok=True)
+    with open(os.path.join("resultados", "validacion_onsager.json"), "w") as f:
         json.dump(informe, f, indent=2)
     return informe
 

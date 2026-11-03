@@ -1,28 +1,27 @@
 """
 ================================================================
- plot.py — Gráficas a partir de lo que guardó run.py
+ graficas.py — Gráficas a partir de lo que guardó flujo.ejecutar
 ================================================================
-    python plot.py                      # usa output_dir de parametros.py
-    python plot.py resultados_onsager_FM
+Se usan desde plot.py (raíz del repositorio):
+    python plot.py                       # carpeta output_dir de parametros.py
+    python plot.py resultados/onsager_FM
 
 Genera en la carpeta de resultados:
   observables.png    U_L, chi, C y <|M|> vs T, con barras de error (pasada fina)
   extrapolacion.png  T_x(L) vs L_eff^-x y la recta hasta L -> infinito
-  histograma_distancias.png  (solo para el material de parametros.py)
+  histograma_distancias.png  distancias entre átomos magnéticos y ventanas de J
 """
 import glob
 import json
 import os
-import sys
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-import parametros
-from analisis import tabla_observables
-from red import distancias_celda
+from .analisis import tabla_observables
+from .red import distancias_celda
 
 
 def cargar(carpeta, etiqueta="fino"):
@@ -33,7 +32,7 @@ def cargar(carpeta, etiqueta="fino"):
     return dict(sorted(datos.items()))
 
 
-def graficar_observables(carpeta, k_B=parametros.k_B, n_bloques=20):
+def graficar_observables(carpeta, k_B, n_bloques=20):
     datos = cargar(carpeta)
     if not datos:
         print(f"No hay datos 'fino_L*.npz' en {carpeta}")
@@ -89,26 +88,19 @@ def graficar_observables(carpeta, k_B=parametros.k_B, n_bloques=20):
     print(f"Gráficas guardadas en {carpeta}/")
 
 
-def graficar_histograma(carpeta, d_max=7.0):
-    ds = distancias_celda(parametros.cell, parametros.posiciones, d_max)
+def graficar_histograma(cfg, carpeta, d_max=7.0):
+    """Histograma de distancias k -> k'+R; con modo 'anillos' marca las ventanas."""
+    ds = distancias_celda(cfg["cell"], cfg["posiciones"], d_max)
     fig, a = plt.subplots(figsize=(7, 4))
     a.hist(ds, bins=300)
-    if parametros.modo_J == "anillos":
-        for an in parametros.anillos:
+    if cfg["modo_J"] == "anillos":
+        for an in cfg["anillos"]:
             for d in np.atleast_1d(an["d"]):
-                a.axvspan(d - parametros.tol, d + parametros.tol, color="C1", alpha=0.3)
+                a.axvspan(d - cfg["tol"], d + cfg["tol"], color="C1", alpha=0.3)
     a.set_xlabel("Distancia (Å)")
     a.set_ylabel("Conteo (pares k -> k'+R)")
-    a.set_title("Distancias entre átomos magnéticos; en naranja las ventanas de cada J",
-                fontsize=9)
+    a.set_title("Distancias entre átomos magnéticos", fontsize=9)
     fig.tight_layout()
     os.makedirs(carpeta, exist_ok=True)
     fig.savefig(os.path.join(carpeta, "histograma_distancias.png"), dpi=150)
     plt.close(fig)
-
-
-if __name__ == "__main__":
-    carpeta = sys.argv[1] if len(sys.argv) > 1 else parametros.output_dir
-    if carpeta == parametros.output_dir:
-        graficar_histograma(carpeta)
-    graficar_observables(carpeta)

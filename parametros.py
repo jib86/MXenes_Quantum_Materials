@@ -4,7 +4,7 @@
 ================================================================
  Material (celda, posiciones, J) + parámetros de la simulación.
  Convención:  H = - sum_<ij> J_ij S_i S_j ,  S = ±1, cada par UNA vez,
-              J > 0 ferromagnético, J en meV  (ver red.py).
+              J > 0 ferromagnético, J en meV  (ver isingmc/red.py y docs/metodo.md).
 """
 import numpy as np
 
@@ -14,12 +14,12 @@ k_B = 0.0861733   # meV/K
 # ===================== DATOS DEL MATERIAL =====================================
 # MXene Nb–Ti 30 % DESNUDA (10 Ti en una supercelda 4x2), J de TB2J tomados del
 # informe de Luis (13 oct 2026). OJO: el informe no trae la lista completa de
-# enlaces ni las posiciones, así que modelo_desnuda.py RECONSTRUYE la red y los
+# enlaces ni las posiciones, así que materiales/nbti30_desnuda.py RECONSTRUYE la red y los
 # enlaces a partir de lo que el informe sí da (ver los supuestos allí). Control:
 # reproduce J0 por capa y lambda_max = 49.2 meV del informe.
 # Cuando se tenga el exchange.out de TB2J, reemplazar por los enlaces reales.
-import modelo_desnuda
-cell, posiciones, _enlaces_desnuda, info_modelo = modelo_desnuda.construir()
+from materiales import nbti30_desnuda
+cell, posiciones, _enlaces_desnuda, info_modelo = nbti30_desnuda.construir()
 
 # ---------------- Acoplamientos -----------------------------------------------
 # modo_J = "anillos": se da una distancia (o una LISTA de distancias) por J y
@@ -65,7 +65,8 @@ MAE_meV = 1.0
 L_list  = [6, 9, 12, 18]
 aspecto = 2
 
-# Rango de temperaturas (K). None = automático a partir del campo medio.
+# Rango de temperaturas (K). None = automático: de 0.25 a 1.05 veces lambda_max/k_B
+# (cota superior de T_c; no se usa como estimación).
 T_min = None
 T_max = None
 
@@ -90,4 +91,4 @@ exponente_fss = 1.0
 seed = 42
 n_procesos = 1     # > 1 corre los distintos L en paralelo
 forzar = False     # True: simular aunque el estado fundamental sea degenerado
-output_dir = "./resultados"
+output_dir = "resultados/material"

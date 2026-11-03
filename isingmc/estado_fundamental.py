@@ -21,8 +21,9 @@ con la de menor energía por sitio. Luego:
     subred siente campo NULO, avisa (subred desacoplada: no puede ordenar);
   * clasifica el orden (FM / AFM / ferri) para decir si la temperatura de
     transición es de Curie o de Néel;
-  * da una estimación de campo medio de T_c a partir del máximo autovalor
-    de la matriz de acoplamientos.
+  * da la escala de canje lambda_max/k_B (máximo autovalor de J(q) en las
+    celdas enumeradas). NO es una estimación de T_c: solo se usa como cota
+    superior para fijar automáticamente el rango del barrido en T.
 
 Limitación: un estado fundamental con periodo mayor que los enumerados no
 se detecta (el programa lo dice). Se puede ampliar con `max_espines`.
@@ -31,7 +32,7 @@ se detecta (el programa lo dice). Se puede ampliar con `max_espines`.
 import numpy as np
 from numba import njit
 
-from red import matriz_acoplamiento
+from .red import matriz_acoplamiento
 
 
 @njit(cache=True)
@@ -109,7 +110,8 @@ def buscar_estado_fundamental(enl, nat, k_B, max_espines=24, epsilon_usuario=Non
     Devuelve un diccionario con:
       periodo (m1, m2), patron (m1*m2*nat signos), e_sitio (meV/sitio),
       n_clases (estados fundamentales distintos), tipo ("FM"/"AFM"/"ferri"),
-      nombre_Tc, T_MF (K), avisos (lista de textos), campo_subred.
+      nombre_Tc, T_escala (K, cota superior para el barrido), avisos,
+      campo_subred.
     """
     avisos = []
     resultados = []
@@ -172,9 +174,10 @@ def buscar_estado_fundamental(enl, nat, k_B, max_espines=24, epsilon_usuario=Non
     else:
         tipo, nombre = "ferri", "temperatura de Curie (ferrimagnético)"
 
-    # Campo medio: máximo autovalor de J(q) en los q de la celda elegida
+    # Escala de canje: máximo autovalor de J(q) en los q de la celda elegida.
+    # Solo fija el rango del barrido (es una cota superior de T_c).
     lam = np.linalg.eigvalsh(A).max()
-    T_MF = lam / k_B
+    T_escala = lam / k_B
 
     # Si el usuario dio un eps, comparar con el encontrado
     if epsilon_usuario is not None:
@@ -195,7 +198,7 @@ def buscar_estado_fundamental(enl, nat, k_B, max_espines=24, epsilon_usuario=Non
     avisos_lim = (f"(Se enumeraron celdas magnéticas de hasta {max_espines} espines; "
                   f"un orden con periodo mayor no se detectaría.)")
     return dict(periodo=(m1, m2), patron=patron, e_sitio=e_glob,
-                n_clases=n_clases, tipo=tipo, nombre_Tc=nombre, T_MF=T_MF,
+                n_clases=n_clases, tipo=tipo, nombre_Tc=nombre, T_escala=T_escala,
                 campo_subred=campo_subred, avisos=avisos, nota=avisos_lim,
                 energias={r["periodo"]: r["e"] for r in resultados})
 
@@ -241,7 +244,7 @@ def resumen_estado_fundamental(gs):
          f"  patrón eps = {gs['patron'].tolist()}",
          f"  energía = {gs['e_sitio']:.6f} meV/sitio,  clases degeneradas = {gs['n_clases']}",
          f"  campo de canje medio por subred (meV) = {np.round(gs['campo_subred'], 4).tolist()}",
-         f"  T_c de campo medio ~ {gs['T_MF']:.1f} K (sobreestima; en 2D el real es menor)",
+         f"  escala de canje lambda_max/k_B = {gs['T_escala']:.1f} K (solo fija el rango del barrido)",
          "  " + gs["nota"]]
     for a in gs["avisos"]:
         l.append("  AVISO: " + a)

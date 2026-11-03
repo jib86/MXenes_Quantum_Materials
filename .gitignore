@@ -1,11 +1,11 @@
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
 # Jupyter
 .ipynb_checkpoints/
-# Resultados generados por las simulaciones (se regeneran con run.py)
-Proyecto_MXenes/resultados/*.npz
-Proyecto_MXenes/resultados/*.json
-Proyecto_MXenes/resultados_*/
+# Resultados generados (se regeneran con run.py / validacion_onsager.py)
+resultados/*
+!resultados/.gitkeep
 # macOS
 .DS_Store

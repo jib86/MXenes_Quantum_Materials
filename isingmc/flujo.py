@@ -3,11 +3,11 @@
  run.py — Flujo completo: de la red y los J hasta T_c en Kelvin
 ================================================================
 
-    python run.py                 # usa parametros.py
+    python run.py                 # desde la raíz del repositorio (usa parametros.py)
 
 Pasos:
   0. Lista de enlaces + verificaciones (coordinación por subred, L mínimo).
-  1. Estado fundamental exacto -> patrón eps, tipo de orden, T_c de campo medio.
+  1. Estado fundamental exacto -> patrón eps y tipo de orden (Curie / Néel).
   2. Pasada GRUESA en T (poca estadística) para ubicar T_c.
   3. Pasada FINA alrededor de T_c con toda la estadística.
   4. Observables con errores (jackknife), tau_int, cruces de Binder por pares
@@ -23,12 +23,12 @@ from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
-from red import (enlaces_por_anillos, enlaces_explicitos, resumen_enlaces,
+from .red import (enlaces_por_anillos, enlaces_explicitos, resumen_enlaces,
                  construir_libreta, L_minimo)
-from estado_fundamental import (buscar_estado_fundamental, construir_epsilon,
+from .estado_fundamental import (buscar_estado_fundamental, construir_epsilon,
                                 resumen_estado_fundamental, fraccion_satisfechos)
-from montecarlo import barrido_temperaturas
-from analisis import (tabla_observables, cruces_binder, extrapolar_Tc,
+from .montecarlo import barrido_temperaturas
+from .analisis import (tabla_observables, cruces_binder, extrapolar_Tc,
                       refinar_cruce, U_ESTRELLA_ISING_2D)
 
 CLAVES = ["k_B", "cell", "posiciones", "modo_J", "anillos", "tol", "enlaces",
@@ -182,8 +182,10 @@ def ejecutar(cfg, verbose=True):
         return dict(exito=False, mensaje=msg, avisos=avisos)
 
     # --- Rango de temperaturas ---
-    T_min = cfg["T_min"] if cfg["T_min"] is not None else 0.25 * gs["T_MF"]
-    T_max = cfg["T_max"] if cfg["T_max"] is not None else 1.05 * gs["T_MF"]
+    # Si no se da, el rango va de 0.25 a 1.05 veces lambda_max/k_B, que es una
+    # cota superior de T_c (no se usa como estimación).
+    T_min = cfg["T_min"] if cfg["T_min"] is not None else 0.25 * gs["T_escala"]
+    T_max = cfg["T_max"] if cfg["T_max"] is not None else 1.05 * gs["T_escala"]
     if verbose:
         print(f"\nPasada gruesa: {cfg['N_temps_grueso']} temperaturas entre "
               f"{T_min:.1f} y {T_max:.1f} K")
@@ -322,7 +324,7 @@ def ejecutar(cfg, verbose=True):
         exito=True, tipo_orden=gs["tipo"], nombre_Tc=gs["nombre_Tc"],
         Tc_K=ext["Tc"], sTc_K=ext["sTc"], sistematico_K=sistematico,
         exponente_fss=ext["exponente"], Tc_alt_K=ext_alt["Tc"], sTc_alt_K=ext_alt["sTc"],
-        chi2_red=ext["chi2_red"], T_MF_K=gs["T_MF"], U_estrella=U_med,
+        chi2_red=ext["chi2_red"], U_estrella=U_med,
         cruces=[dict(L_eff=float(a), T=float(b), sT=float(c), U=float(d), sU=float(e))
                 for a, b, c, d, e in usados],
         patron_eps=gs["patron"].tolist(), periodo=list(gs["periodo"]),
@@ -340,10 +342,3 @@ def ejecutar(cfg, verbose=True):
     return resumen
 
 
-def main():
-    import parametros
-    ejecutar(config_desde_modulo(parametros))
-
-
-if __name__ == "__main__":
-    main()

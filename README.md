@@ -1,60 +1,105 @@
-# Monte Carlo de Ising para MXenes 2D
+# Monte Carlo de Ising para materiales magnéticos 2D
 
-Predice la temperatura de transición magnética (Curie o Néel) de un material 2D
-a partir de su red y de los acoplamientos de canje *J* obtenidos por DFT.
+Cálculo de la temperatura de transición magnética (**Curie o Néel**) de una
+monocapa a partir de sus acoplamientos de canje *J* (por ejemplo, de TB2J), con
+el cumulante de Binder y escalamiento de tamaño finito. Aplicado a MXenes
+Nb–Ti.
 
-**La idea en una línea:** red + *J* → estado fundamental → Monte Carlo en varios
-tamaños *L* → cruce del cumulante de Binder → extrapolación a *L* → ∞ → *T*c en K.
+```
+red + J  →  estado fundamental  →  Monte Carlo (varios L)  →  cruce de Binder  →  L → ∞  →  T_c ± error
+```
+
+**Validado** contra la solución exacta de Onsager (red cuadrada FM y AFM):
+error de 0.02–0.37 %, U* = 0.612–0.615. Ver [docs/resultados.md](docs/resultados.md).
+
+---
+
+## Instalación
+
+```bash
+pip install -r requirements.txt      # numpy, scipy, numba, matplotlib
+pip install pytest                   # opcional, para las pruebas
+```
 
 ## Uso
 
 ```bash
-pip install -r requirements.txt
-python validacion_onsager.py   # 1) probar el código contra la solución exacta
-python run.py                  # 2) simular el material definido en parametros.py
-python plot.py                 # 3) gráficas en resultados/
+python validacion_onsager.py   # 1. comprobar el código contra Onsager (~20 min)
+python run.py                  # 2. simular el material definido en parametros.py
+python plot.py                 # 3. gráficas en resultados/material/
+pytest                         # pruebas unitarias (segundos)
 ```
 
-Lo **único** que se edita es `Proyecto_MXenes/parametros.py`: celda, posiciones de
-los átomos magnéticos, los *J* (por anillos de distancia o como lista explícita
-de enlaces tipo TB2J) y los parámetros de la simulación.
+Lo **único** que se edita es [`parametros.py`](parametros.py): celda, posiciones
+de los átomos magnéticos, acoplamientos y parámetros de la simulación. El
+cuaderno [`notebooks/MonteCarlo.ipynb`](notebooks/MonteCarlo.ipynb) hace el
+mismo flujo paso a paso.
 
-## Convención
+Salida típica de `run.py`:
 
-H = − Σ<sub>⟨ij⟩</sub> *J*<sub>ij</sub> S<sub>i</sub> S<sub>j</sub>, con S = ±1,
-cada par contado **una** vez, *J* > 0 ferromagnético, *J* en meV.
-Si sus *J* vienen con otra convención use `factor_J` (p. ej. 2 si la fuente
-suma sobre i ≠ j).
+```
+Estado fundamental: periodo 1x1 celdas, orden FM  ->  la transición es una temperatura de Curie.
+...
+Cruces del cumulante de Binder:
+  L=12 / 18: T_x = 590.975 ± 1.748 K, U* = 0.5983 ± 0.0155  [robusto]
+Extrapolación (3 pares, x = 1): T_c(inf) = 591.724 ± 3.955 K
+RESULTADO: temperatura de Curie = 591.72 ± 3.95 (estad.) ± 0.77 (sist.) K
+  AVISO: MAE / (k_B T_c) = 0.0196: MENOR que 10: Ising sobreestima T_c; use Heisenberg con anisotropía.
+```
 
-## Estructura (`Proyecto_MXenes/`)
+## Cómo cargar un material
 
-| Archivo | Qué hace |
+Los acoplamientos se dan como enlaces de la celda unidad
+**(k, k′, n1, n2, J)**: el átomo k de la celda (0, 0) con el átomo k′ de la
+celda (n1, n2), que es el formato de TB2J. También se pueden dar por anillos de
+distancia. Ver el ejemplo en [`materiales/nbti30_desnuda.py`](materiales/nbti30_desnuda.py).
+
+**Convención:** H = −Σ<sub>⟨ij⟩</sub> J<sub>ij</sub> S<sub>i</sub> S<sub>j</sub>,
+S = ±1, cada par contado una vez, J > 0 ferromagnético, J en meV.
+Para J de TB2J use `factor_J = 2`.
+
+## Estructura
+
+```
+├── parametros.py            configuración del material y de la simulación (único archivo a editar)
+├── run.py                   corre el flujo completo
+├── plot.py                  gráficas de una corrida guardada
+├── validacion_onsager.py    prueba contra la solución exacta (FM y AFM)
+├── isingmc/                 paquete
+│   ├── red.py                 enlaces, coordinación por subred, supercelda verificada
+│   ├── estado_fundamental.py  orden a T = 0 por enumeración exacta; Curie o Néel
+│   ├── montecarlo.py          Metrópolis, Wolff e híbrido (numba)
+│   ├── analisis.py            τ_int, jackknife, cruces de Binder con reponderación, extrapolación
+│   ├── flujo.py               barrido grueso → intermedio → final; T_c ± error
+│   └── graficas.py            U_L, χ, C, ⟨|M|⟩, extrapolación, histograma de distancias
+├── materiales/              modelos de materiales
+│   └── nbti30_desnuda.py      MXene Nb–Ti 30 % desnuda (J de TB2J)
+├── notebooks/               cuaderno de trabajo y rendimiento
+├── tests/                   pruebas unitarias (pytest)
+├── docs/
+│   ├── metodo.md              método, convenciones y verificaciones
+│   ├── resultados.md          validación y resultados del material
+│   └── figuras/
+└── resultados/              salida de las simulaciones (no se versiona)
+```
+
+## Qué verifica el programa
+
+| Etapa | Verificación |
 |---|---|
-| `parametros.py` | Datos del material y de la simulación (único archivo a editar) |
-| `red.py` | Lista de enlaces (k, k′, n1, n2, J), coordinación por subred, supercelda y libreta de vecinos verificadas |
-| `estado_fundamental.py` | Enumeración exacta del orden a T = 0: patrón ε, degeneración, subredes desacopladas, FM/AFM/ferri, campo medio |
-| `montecarlo.py` | Metrópolis, Wolff e híbrido (numba); series temporales E(t), M(t) |
-| `analisis.py` | τ<sub>int</sub> (Madras–Sokal), errores jackknife, cruces de Binder con error, extrapolación ponderada |
-| `run.py` | Flujo completo: pasada gruesa → pasada fina (con re-centrado) → *T*c ± error |
-| `validacion_onsager.py` | Red cuadrada FM y AFM: *T*c = 2.269 \|J\|/k<sub>B</sub>, U* ≈ 0.611 |
-| `plot.py` | U<sub>L</sub>, χ, C, ⟨\|M\|⟩ con barras de error; extrapolación; histograma de distancias |
-| `MonteCarlo.ipynb` | Cuaderno que usa los módulos (sin código duplicado) |
-| `Benchmark.ipynb` | Python puro vs Numba |
+| Red | ventanas de distancia solapadas, pares sin asignar, coordinación por subred, L mínimo, vecinos duplicados |
+| Estado fundamental | degeneración y subredes desacopladas (**se detiene**), L múltiplo del periodo magnético |
+| Monte Carlo | τ<sub>int</sub> frente al largo de los bloques del jackknife |
+| Cruces de Binder | orientación física y significancia frente al ruido |
+| Modelo | MAE ≳ 10 k<sub>B</sub>T<sub>c</sub> para que Ising sea cuantitativo |
 
-## Verificaciones que hace el programa
+## Alcance
 
-- Ventanas de distancia que se solapan o pares sin asignar dentro del corte.
-- Tamaño mínimo de supercelda (sin vecinos duplicados por imágenes periódicas).
-- Estado fundamental degenerado o subredes con campo de canje nulo: **se detiene**
-  (no hay un orden único que medir).
-- *L* múltiplo del periodo magnético.
-- Bloques del jackknife largos frente a τ<sub>int</sub>.
-- Cruces de Binder con la orientación física y significativos frente al ruido.
-- Criterio de validez de Ising: MAE ≳ 10 k<sub>B</sub>*T*c (si se da `MAE_meV`).
-
-## Limitaciones
-
-- Modelo de Ising (espines ±1): solo cuantitativo con anisotropía de eje fácil
-  fuerte. Si no, Ising sobreestima *T*c y hace falta Heisenberg con anisotropía.
-- El valor universal U* ≈ 0.611 es para la red cuadrada isótropa; con otra
+- Es un modelo de **Ising** (espines ±1). Es cuantitativo con anisotropía de
+  eje fácil fuerte. Con anisotropía débil, como en las MXenes Nb–Ti
+  (MAE / k<sub>B</sub>T<sub>c</sub> ≈ 0.02–0.2), sobreestima T<sub>c</sub> y da una cota
+  superior; ahí corresponde Heisenberg con anisotropía.
+- El valor universal U* ≈ 0.611 es el de la red cuadrada isótropa; con otra
   geometría de celda U* cambia y sirve solo como guía.
+
+Detalles del método y referencias en [docs/metodo.md](docs/metodo.md).
